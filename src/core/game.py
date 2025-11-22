@@ -7,7 +7,7 @@ from src.core.constants import (
     NATIVE_WIDTH, NATIVE_HEIGHT,
     WINDOW_WIDTH, WINDOW_HEIGHT,
     SCALE_FACTOR, FPS, GAME_TITLE,
-    COLOR_BLACK, COLOR_GRAY, COLOR_YELLOW
+    COLOR_BLACK, COLOR_GRAY, COLOR_YELLOW, COLOR_WHITE, COLOR_RED
 )
 from src.core.state_machine import StateMachine, GameState
 from src.entities.player import Player
