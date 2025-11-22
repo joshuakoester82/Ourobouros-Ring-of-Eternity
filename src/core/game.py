@@ -11,9 +11,11 @@ from src.core.constants import (
 )
 from src.core.state_machine import StateMachine, GameState
 from src.entities.player import Player
+from src.entities.item import create_item, ItemType
 from src.world.world import World
 from src.world.camera import Camera
-from src.world.screen import Direction
+from src.world.screen import Direction, ScreenID
+from src.ui.hud import HUD
 
 
 class Game:
@@ -47,15 +49,62 @@ class Game:
         self.world = World()
         self.camera = Camera()
 
+        # HUD
+        self.hud = HUD()
+
         # Player (spawn in center of screen)
         self.player = Player(
             x=NATIVE_WIDTH // 2 - 8,
             y=NATIVE_HEIGHT // 2 - 8
         )
 
+        # Spawn test items
+        self._spawn_test_items()
+
         print(f"Game initialized: {WINDOW_WIDTH}x{WINDOW_HEIGHT} " +
               f"(native: {NATIVE_WIDTH}x{NATIVE_HEIGHT}, scale: {SCALE_FACTOR}x)")
         print(f"Starting in: {self.world.get_current_screen().name}")
+
+    def _spawn_test_items(self):
+        """Spawn test items in the world for demonstration"""
+        # Hub - spawn some keys and crystals
+        hub = self.world.get_screen(ScreenID.TOWER_HUB)
+        hub.entities.append(create_item(ItemType.GOLD_KEY, 40, 40))
+        hub.entities.append(create_item(ItemType.SWORD, 120, 40))
+
+        # Gardens - spawn acorn and green crystal
+        gardens_2 = self.world.get_screen(ScreenID.GARDENS_2)
+        gardens_2.entities.append(create_item(ItemType.ACORN, 60, 60))
+
+        gardens_4 = self.world.get_screen(ScreenID.GARDENS_4)
+        gardens_4.entities.append(create_item(ItemType.GREEN_CRYSTAL, 80, 96))
+
+        # Catacombs - spawn bomb and red crystal
+        catacombs_2 = self.world.get_screen(ScreenID.CATACOMBS_2)
+        catacombs_2.entities.append(create_item(ItemType.BOMB, 50, 80))
+
+        catacombs_4 = self.world.get_screen(ScreenID.CATACOMBS_4)
+        catacombs_4.entities.append(create_item(ItemType.RED_CRYSTAL, 80, 96))
+
+        # Ruins - spawn chalice and blue crystal
+        ruins_2 = self.world.get_screen(ScreenID.RUINS_2)
+        ruins_2.entities.append(create_item(ItemType.CHALICE, 70, 70))
+
+        ruins_3 = self.world.get_screen(ScreenID.RUINS_3)
+        ruins_3.entities.append(create_item(ItemType.BLUE_CRYSTAL, 80, 96))
+
+        # Cliffs - spawn flute and yellow crystal
+        cliffs_2 = self.world.get_screen(ScreenID.CLIFFS_2)
+        cliffs_2.entities.append(create_item(ItemType.FLUTE, 65, 75))
+
+        cliffs_4 = self.world.get_screen(ScreenID.CLIFFS_4)
+        cliffs_4.entities.append(create_item(ItemType.YELLOW_CRYSTAL, 80, 96))
+
+        # Add silver key to catacombs
+        catacombs_3 = self.world.get_screen(ScreenID.CATACOMBS_3)
+        catacombs_3.entities.append(create_item(ItemType.SILVER_KEY, 80, 60))
+
+        print("Test items spawned in world")
 
     def handle_events(self):
         """Handle pygame events"""
@@ -65,6 +114,40 @@ class Game:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
+                elif event.key == pygame.K_SPACE:
+                    self.handle_space_interaction()
+
+    def handle_space_interaction(self):
+        """Handle SPACE key interaction (pickup/drop items)"""
+        if not self.state_machine.is_state(GameState.EXPLORE):
+            return
+
+        current_screen = self.world.get_current_screen()
+
+        # If player is holding an item, drop it
+        if self.player.has_item():
+            dropped_item = self.player.drop_item()
+            if dropped_item is not None:
+                # Place item at player's current position
+                dropped_item.x = self.player.x + self.player.width // 2 - dropped_item.size // 2
+                dropped_item.y = self.player.y + self.player.height // 2 - dropped_item.size // 2
+                dropped_item.active = True
+                current_screen.entities.append(dropped_item)
+                print(f"Dropped: {dropped_item.get_name()}")
+        else:
+            # Try to pick up an item
+            for entity in current_screen.entities:
+                # Check if it's an item (has item_type attribute)
+                if hasattr(entity, 'item_type'):
+                    if entity.is_near_player(
+                        self.player.x, self.player.y,
+                        self.player.width, self.player.height
+                    ):
+                        if self.player.pick_up_item(entity):
+                            entity.active = False
+                            current_screen.entities.remove(entity)
+                            print(f"Picked up: {entity.get_name()}")
+                            break
 
     def update(self):
         """Update game logic"""
@@ -112,6 +195,9 @@ class Game:
 
             # Render player
             self.player.render(self.native_surface)
+
+            # Render HUD
+            self.hud.render(self.native_surface, self.player)
 
         # Scale up the native surface to the window
         scaled_surface = pygame.transform.scale(
