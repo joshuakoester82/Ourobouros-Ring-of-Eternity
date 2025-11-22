@@ -120,8 +120,9 @@ class Game:
         """Spawn test items in the world for demonstration"""
         # Hub - spawn some keys and crystals
         hub = self.world.get_screen(ScreenID.TOWER_HUB)
-        hub.entities.append(create_item(ItemType.GOLD_KEY, 40, 40))
-        hub.entities.append(create_item(ItemType.SWORD, 120, 40))
+        # Commented out test items from hub - player should find these in the world
+        # hub.entities.append(create_item(ItemType.GOLD_KEY, 40, 40))
+        # hub.entities.append(create_item(ItemType.SWORD, 120, 40))
 
         # Gardens - spawn acorn and green crystal
         gardens_2 = self.world.get_screen(ScreenID.GARDENS_2)
