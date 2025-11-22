@@ -17,7 +17,7 @@ GAME_TITLE = "Ouroboros - Ring of Eternity"
 TILE_SIZE = 16
 
 # Player settings
-PLAYER_SIZE = 16
+PLAYER_SIZE = 8  # Smaller size to fit better in rooms
 PLAYER_SPEED = 2  # pixels per frame
 
 # Colors (Atari 2600 inspired palette)
