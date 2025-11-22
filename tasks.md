@@ -107,8 +107,8 @@
 - [x] Sword sprite and combat logic
 - [x] Fish (easter egg) sprite and logic
 
-### 3.5 Interaction Feedback
-- [ ] White outline on interactable objects in range
+### 3.5 Interaction Feedback ✓
+- [x] White outline on interactable objects in range
 - [x] Colored outlines on pedestals
 - [x] Keyhole sprites on locked doors
 
@@ -192,52 +192,55 @@
 - [x] Press Space to Restart functionality
 - [x] Game state reset
 
-## Phase 7: NPCs & Easter Eggs
-### 7.1 The Owl
-- [ ] Owl sprite in North Biome
-- [ ] Proximity detection with Flute
-- [ ] "Song of Sleep" hint text display
+## Phase 7: NPCs & Easter Eggs ✓
+### 7.1 The Owl ✓
+- [x] Owl sprite in North Biome
+- [x] Proximity detection with Flute
+- [x] "Song of Sleep" hint text display
 
-### 7.2 The Cat
-- [ ] Cat sprite in Tower Hub
-- [ ] Fish drop proximity detection
-- [ ] Follow-the-player companion AI
-- [ ] Screen-to-screen persistence
+### 7.2 The Cat ✓
+- [x] Cat sprite in Tower Hub
+- [x] Fish drop proximity detection
+- [x] Follow-the-player companion AI
+- [x] Screen-to-screen persistence
 
-## Phase 8: Audio System
-### 8.1 Audio Framework
-- [ ] Set up pygame.mixer
-- [ ] Implement numpy array sound generation
-- [ ] Create sound effect manager
+## Phase 8: Audio System ✓
+### 8.1 Audio Framework ✓
+- [x] Set up pygame.mixer
+- [x] Implement numpy array sound generation
+- [x] Create sound effect manager
 
-### 8.2 Sound Effects (Procedural)
-- [ ] Walk: White noise burst (300ms interval)
-- [ ] Pickup: Ascending arpeggio (square wave)
-- [ ] Drop: Descending slide
-- [ ] Sword Hit: Low frequency noise + sawtooth fade
-- [ ] Enemy Death: Distortion crunch
-- [ ] Victory: Major chord progression
-- [ ] Bomb Timer: Ticking sound
-- [ ] Flute Melody: Custom melody
+### 8.2 Sound Effects (Procedural) ✓
+- [x] Walk: White noise burst (300ms interval)
+- [x] Pickup: Ascending arpeggio (square wave)
+- [x] Drop: Descending slide
+- [x] Sword Hit: Low frequency noise + sawtooth fade
+- [x] Enemy Death: Distortion crunch
+- [x] Victory: Major chord progression
+- [x] Bomb Timer: Ticking sound
+- [x] Flute Melody: Custom melody
+- [x] Gate Open: Mechanical rumble
+- [x] Crystal Place: Magical chime
 
-### 8.3 Ambient Audio
-- [ ] Tower Hub low hum
-- [ ] Wind noise for outside areas
-- [ ] Biome-specific ambient sounds (optional)
+### 8.3 Ambient Audio ✓
+- [x] Tower Hub low hum
+- [x] Wind noise for outside areas
+- [x] Biome-specific ambient sounds (location-based switching)
 
 ## Phase 9: UI & Visual Polish
-### 9.1 HUD
-- [ ] Current item display
-- [ ] Crystal collection counter
-- [ ] Minimal UI overlay
+### 9.1 HUD ✓
+- [x] Current item display
+- [x] Crystal collection counter
+- [x] Minimal UI overlay
 
 ### 9.2 Visual Effects
-- [ ] Screen transition effects
-- [ ] Explosion particle burst
-- [ ] Lightning bolt effect
-- [ ] Slime recede animation
-- [ ] Tree growth animation
-- [ ] Sprite flickering for The Void
+- [x] White outline on interactable objects in range
+- [ ] Screen transition effects (optional polish)
+- [ ] Explosion particle burst (optional polish)
+- [ ] Lightning bolt effect (optional polish)
+- [ ] Slime recede animation (optional polish)
+- [ ] Tree growth animation (optional polish)
+- [x] Sprite flickering for The Void (already implemented)
 
 ### 9.3 Atari 2600 Aesthetic
 - [ ] Chunky pixel sprites (16x16 standard)
@@ -302,8 +305,8 @@
 ## Current Status
 **Last Updated:** 2025-11-22
 
-**Phase:** Phase 6 Complete - Core Gameplay Finished!
-**Completed Tasks:** ~95+
+**Phase:** Phase 8 Complete - NPCs and Audio Implemented!
+**Completed Tasks:** ~115+
 **Total Tasks:** ~150+
 
 **Recently Completed:**
@@ -329,9 +332,22 @@
 
 **Game is now fully playable from start to finish!**
 
-**Next Steps (Polish & Enhancement):**
-1. Add NPC interactions (Owl, Cat) - Phase 7
-2. Implement audio system with procedural sound effects - Phase 8
-3. Add visual polish and effects - Phase 9
-4. Complete world building (all 24 screens) - Phase 2
-5. Final testing and balancing - Phase 11
+**Recently Added (2025-11-22):**
+- Phase 7: NPCs & Easter Eggs ✓
+  - The Owl NPC with Flute hint system
+  - The Cat companion NPC with Fish following mechanics
+  - Screen-to-screen companion persistence
+- Phase 8: Audio System ✓
+  - Procedural sound generation with pygame.mixer and numpy
+  - 10 different sound effects (walk, pickup, drop, sword hit, enemy death, victory, bomb, flute, gate, crystal)
+  - Ambient audio system (Tower hum, Wind noise)
+  - Location-based ambient switching
+- Phase 9 (Partial): UI & Visual Polish
+  - White outline interaction hints on nearby objects
+  - Crystal collection counter in HUD (already present)
+
+**Next Steps (Optional Polish):**
+1. Complete world building with all 24 screens - Phase 2
+2. Additional visual effects (particles, animations) - Phase 9
+3. Final testing and balancing - Phase 11
+4. Documentation and packaging - Phase 12

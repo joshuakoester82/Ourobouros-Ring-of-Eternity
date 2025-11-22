@@ -18,10 +18,12 @@ from src.entities.interactable import (
     InteractableType
 )
 from src.entities.enemy import create_enemy, EnemyType
+from src.entities.npc import create_npc, NPCType, Cat
 from src.world.world import World
 from src.world.camera import Camera
 from src.world.screen import Direction, ScreenID
 from src.ui.hud import HUD
+from src.audio import SoundManager, SoundType, AmbientManager, AmbienceType
 
 
 class Game:
@@ -65,12 +67,20 @@ class Game:
         self.boss_defeated = False
         self.victory_timer = 0
 
+        # NPC tracking
+        self.cat = None  # The cat companion
+
         # World and camera
         self.world = World()
         self.camera = Camera()
 
         # HUD
         self.hud = HUD()
+
+        # Audio
+        self.sound_manager = SoundManager()
+        self.ambient_manager = AmbientManager()
+        self.sound_manager.set_volume(0.6)  # Moderate volume
 
         # Player (spawn in center of screen)
         self.player = Player(
@@ -86,6 +96,9 @@ class Game:
 
         # Add enemies to world
         self._spawn_enemies()
+
+        # Add NPCs to world
+        self._spawn_npcs()
 
         # Setup final chamber
         self._setup_final_chamber()
@@ -230,6 +243,24 @@ class Game:
 
         print("Enemies spawned in world")
 
+    def _spawn_npcs(self):
+        """Spawn NPCs in the world"""
+        # The Owl - in Gardens (North Biome)
+        gardens_2 = self.world.get_screen(ScreenID.GARDENS_2)
+        owl = create_npc(NPCType.OWL, 100, 40)
+        gardens_2.entities.append(owl)
+
+        # The Cat - in Tower Hub
+        hub = self.world.get_screen(ScreenID.TOWER_HUB)
+        self.cat = create_npc(NPCType.CAT, 120, 120)
+        hub.entities.append(self.cat)
+
+        # Add Fish item to a screen for Cat interaction
+        gardens_3 = self.world.get_screen(ScreenID.GARDENS_3)
+        gardens_3.entities.append(create_item(ItemType.FISH, 30, 40))
+
+        print("NPCs spawned in world")
+
     def _setup_final_chamber(self):
         """Setup the final chamber with boss and ring"""
         final_chamber = self.world.get_screen(ScreenID.FINAL_CHAMBER)
@@ -296,6 +327,9 @@ class Game:
         # Respawn enemies
         self._spawn_enemies()
 
+        # Respawn NPCs
+        self._spawn_npcs()
+
         # Setup final chamber
         self._setup_final_chamber()
 
@@ -356,6 +390,7 @@ class Game:
                                 entity.is_activated = True
                                 entity.solid = False
                                 entity.active = False
+                                self.sound_manager.play_sound(SoundType.BOMB_TIMER)
                                 print("Bomb placed! The wall crumbles!")
                                 # Respawn bomb at original location
                                 catacombs_2 = self.world.get_screen(ScreenID.CATACOMBS_2)
@@ -369,6 +404,7 @@ class Game:
                                 break
                             elif result == "sleeping":
                                 # Statue put to sleep
+                                self.sound_manager.play_sound(SoundType.FLUTE_MELODY)
                                 print("The statue's eyes close... it sleeps.")
                                 break
                             elif result is True:
@@ -378,9 +414,13 @@ class Game:
                                     crystal_type = held_item.item_type
                                     if crystal_type in self.crystals_placed:
                                         self.crystals_placed[crystal_type] = True
+                                        self.sound_manager.play_sound(SoundType.CRYSTAL_PLACE)
                                         print(f"Crystal placed: {held_item.get_name()}")
                                         # Check if all crystals are now placed
                                         self._check_crystal_activation()
+                                # Check for gate opening
+                                elif hasattr(entity, 'interactable_type') and 'GATE' in str(entity.interactable_type):
+                                    self.sound_manager.play_sound(SoundType.GATE_OPEN)
                                 # Consume the item
                                 self.player.drop_item()
                                 print(f"{entity.get_name()} activated!")
@@ -395,7 +435,21 @@ class Game:
                     dropped_item.y = self.player.y + self.player.height // 2 - dropped_item.size // 2
                     dropped_item.active = True
                     current_screen.entities.append(dropped_item)
+                    self.sound_manager.play_sound(SoundType.DROP)
                     print(f"Dropped: {dropped_item.get_name()}")
+
+                    # Check if Fish was dropped near Cat
+                    if dropped_item.item_type == ItemType.FISH and self.cat:
+                        for entity in current_screen.entities:
+                            if hasattr(entity, 'npc_type') and entity.npc_type == NPCType.CAT:
+                                # Check if fish is near cat
+                                if entity.is_near_player(dropped_item.x, dropped_item.y,
+                                                        dropped_item.size, dropped_item.size,
+                                                        distance=30):
+                                    entity.activate_following()
+                                    # Remove the fish
+                                    current_screen.entities.remove(dropped_item)
+                                    break
         else:
             # Try to pick up an item
             for entity in current_screen.entities:
@@ -410,6 +464,7 @@ class Game:
                             print("\n" + "=" * 50)
                             print("YOU HAVE CLAIMED THE RING OF ETERNITY!")
                             print("=" * 50 + "\n")
+                            self.sound_manager.play_sound(SoundType.VICTORY)
                             entity.active = False
                             current_screen.entities.remove(entity)
                             self.state_machine.change_state(GameState.WIN)
@@ -417,6 +472,7 @@ class Game:
                         elif self.player.pick_up_item(entity):
                             entity.active = False
                             current_screen.entities.remove(entity)
+                            self.sound_manager.play_sound(SoundType.PICKUP)
                             print(f"Picked up: {entity.get_name()}")
                             break
 
@@ -429,6 +485,9 @@ class Game:
         elif self.state_machine.is_state(GameState.EXPLORE) or self.state_machine.is_state(GameState.ACTIVATION):
             # Get current screen
             current_screen = self.world.get_current_screen()
+
+            # Update ambient audio based on location
+            self._update_ambient_audio()
 
             # Check for final chamber entry (special transition)
             if self.world.current_screen_id == ScreenID.TOWER_HUB and self.all_crystals_placed:
@@ -446,13 +505,23 @@ class Game:
                         return
 
             # Update player
+            old_x, old_y = self.player.x, self.player.y
             self.player.handle_input()
             self.player.update(current_screen)
+
+            # Play walk sound if player moved
+            if (old_x != self.player.x or old_y != self.player.y):
+                self.sound_manager.play_walk_sound()
 
             # Update enemies
             for entity in current_screen.entities:
                 if hasattr(entity, 'enemy_type'):
                     entity.update(self.player.x, self.player.y, current_screen)
+
+            # Update NPCs
+            for entity in current_screen.entities:
+                if hasattr(entity, 'npc_type'):
+                    entity.update(self.player.x, self.player.y, self.player.held_item)
 
             # Check combat and collisions
             self._handle_combat(current_screen)
@@ -475,6 +544,23 @@ class Game:
                     )
                     self.player.x = new_x
                     self.player.y = new_y
+
+                    # Move cat to new screen if following
+                    if self.cat and self.cat.following:
+                        # Remove cat from old screen
+                        for screen_id in [ScreenID.TOWER_HUB, ScreenID.GARDENS_1, ScreenID.GARDENS_2,
+                                        ScreenID.GARDENS_3, ScreenID.GARDENS_4, ScreenID.CATACOMBS_1,
+                                        ScreenID.CATACOMBS_2, ScreenID.CATACOMBS_3, ScreenID.CATACOMBS_4,
+                                        ScreenID.RUINS_1, ScreenID.RUINS_2, ScreenID.RUINS_3, ScreenID.RUINS_4,
+                                        ScreenID.CLIFFS_1, ScreenID.CLIFFS_2, ScreenID.CLIFFS_3, ScreenID.CLIFFS_4]:
+                            screen = self.world.get_screen(screen_id)
+                            screen.entities = [e for e in screen.entities
+                                             if not (hasattr(e, 'npc_type') and e.npc_type == NPCType.CAT)]
+
+                        # Add cat to new screen at player position
+                        new_screen = self.world.get_current_screen()
+                        self.cat.set_position(new_x, new_y + 20)  # Slightly behind player
+                        new_screen.entities.append(self.cat)
 
         elif self.state_machine.is_state(GameState.CLIMAX):
             # Boss fight state
@@ -560,6 +646,8 @@ class Game:
                         # Player kills enemy
                         entity.alive = False
                         current_screen.entities.remove(entity)
+                        self.sound_manager.play_sound(SoundType.SWORD_HIT)
+                        self.sound_manager.play_sound(SoundType.ENEMY_DEATH)
                         print(f"Defeated enemy!")
                     else:
                         # Player dies
@@ -598,6 +686,19 @@ class Game:
         self.player.x = NATIVE_WIDTH // 2 - 8
         self.player.y = NATIVE_HEIGHT // 2 - 8
 
+    def _update_ambient_audio(self):
+        """Update ambient audio based on current screen"""
+        current_screen_id = self.world.current_screen_id
+
+        # Determine ambient type based on screen
+        if current_screen_id == ScreenID.TOWER_HUB or current_screen_id == ScreenID.FINAL_CHAMBER:
+            ambience = AmbienceType.TOWER_HUM
+        else:
+            ambience = AmbienceType.WIND
+
+        # Set ambience (will only change if different)
+        self.ambient_manager.set_ambience(ambience)
+
     def _check_crystal_activation(self):
         """Check if all crystals have been placed and activate accordingly"""
         if all(self.crystals_placed.values()) and not self.all_crystals_placed:
@@ -630,6 +731,9 @@ class Game:
             current_screen = self.world.get_current_screen()
             current_screen.render(self.native_surface)
 
+            # Render white outlines on nearby interactable objects
+            self._render_interaction_hints(current_screen)
+
             # Render player
             self.player.render(self.native_surface)
 
@@ -653,6 +757,33 @@ class Game:
 
         # Update the display
         pygame.display.flip()
+
+    def _render_interaction_hints(self, current_screen):
+        """
+        Render white outlines around interactable objects near the player
+
+        Args:
+            current_screen: Current screen
+        """
+        for entity in current_screen.entities:
+            # Check if it's an interactable or item
+            is_interactable = hasattr(entity, 'interactable_type')
+            is_item = hasattr(entity, 'item_type')
+
+            if (is_interactable or is_item) and entity.active:
+                # Check if player is near
+                if entity.is_near_player(
+                    self.player.x, self.player.y,
+                    self.player.width, self.player.height
+                ):
+                    # Draw white outline
+                    outline_rect = pygame.Rect(
+                        int(entity.x - 1),
+                        int(entity.y - 1),
+                        entity.width + 2 if hasattr(entity, 'width') else entity.size + 2,
+                        entity.height + 2 if hasattr(entity, 'height') else entity.size + 2
+                    )
+                    pygame.draw.rect(self.native_surface, COLOR_WHITE, outline_rect, 1)
 
     def _render_victory_screen(self):
         """Render the victory screen"""
@@ -731,4 +862,6 @@ class Game:
     def quit(self):
         """Clean up and quit the game"""
         print("Shutting down...")
+        self.sound_manager.cleanup()
+        self.ambient_manager.stop()
         pygame.quit()
