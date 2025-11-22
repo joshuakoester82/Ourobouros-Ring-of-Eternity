@@ -91,10 +91,10 @@ class Game:
         self.ambient_manager = AmbientManager()
         self.sound_manager.set_volume(0.6)  # Moderate volume
 
-        # Player (spawn in center of screen)
+        # Player (spawn near top of screen to avoid fountain)
         self.player = Player(
-            x=NATIVE_WIDTH // 2 - 8,
-            y=NATIVE_HEIGHT // 2 - 8
+            x=NATIVE_WIDTH // 2 - 8,  # Centered horizontally (72)
+            y=32  # Near top, clear of fountain at (80, 96)
         )
 
         # Spawn test items
