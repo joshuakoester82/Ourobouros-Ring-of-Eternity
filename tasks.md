@@ -141,39 +141,39 @@
 - [x] Statue dormant state (sprite change)
 - [x] Safe crystal collection
 
-## Phase 5: Enemy AI & Combat
-### 5.1 Enemy Base System
-- [ ] Enemy base class
-- [ ] Collision detection with player
-- [ ] Death/respawn logic
-- [ ] Spawn point system
+## Phase 5: Enemy AI & Combat ✓
+### 5.1 Enemy Base System ✓
+- [x] Enemy base class
+- [x] Collision detection with player
+- [x] Death/respawn logic
+- [x] Spawn point system
 
-### 5.2 Tier 1: The Crawler
-- [ ] Green square blob sprite
-- [ ] Brownian motion AI (random cardinal directions)
-- [ ] Pause and direction change logic
-- [ ] Wall bounce behavior
+### 5.2 Tier 1: The Crawler ✓
+- [x] Green square blob sprite
+- [x] Brownian motion AI (random cardinal directions)
+- [x] Pause and direction change logic
+- [x] Wall bounce behavior
 
-### 5.3 Tier 2: The Chaser
-- [ ] Red chevron/triangle sprite
-- [ ] Line-of-sight raycasting
-- [ ] Aggro range (150 pixels)
-- [ ] Chase behavior (75% player speed)
-- [ ] Return to spawn logic
+### 5.3 Tier 2: The Chaser ✓
+- [x] Red chevron/triangle sprite
+- [x] Line-of-sight raycasting
+- [x] Aggro range (150 pixels)
+- [x] Chase behavior (75% player speed)
+- [x] Return to spawn logic
 
-### 5.4 Tier 3: The Sentinel
-- [ ] Yellow serpentine sprite (multi-segment optional)
-- [ ] Fixed patrol route waypoints
-- [ ] Rapid looping movement
-- [ ] Sword immunity
-- [ ] Timing-based bypass challenge
+### 5.4 Tier 3: The Sentinel ✓
+- [x] Yellow serpentine sprite (multi-segment optional)
+- [x] Fixed patrol route waypoints
+- [x] Rapid looping movement
+- [x] Sword immunity
+- [x] Timing-based bypass challenge
 
-### 5.5 Combat System
-- [ ] Sword-wielding collision detection
-- [ ] Enemy kill logic for Tier 1 & 2
-- [ ] Player death on unarmed collision
-- [ ] Player respawn at Tower Hub
-- [ ] Item drop on death (persistent location)
+### 5.5 Combat System ✓
+- [x] Sword-wielding collision detection
+- [x] Enemy kill logic for Tier 1 & 2
+- [x] Player death on unarmed collision
+- [x] Player respawn at Tower Hub
+- [x] Item drop on death (persistent location)
 
 ## Phase 6: Boss & Endgame
 ### 6.1 The Void Boss
@@ -302,8 +302,8 @@
 ## Current Status
 **Last Updated:** 2025-11-22
 
-**Phase:** Phase 4 Complete - Moving to Phase 5 (Enemy AI & Combat)
-**Completed Tasks:** ~60+
+**Phase:** Phase 5 Complete - Moving to Phase 6 (Boss & Endgame)
+**Completed Tasks:** ~85+
 **Total Tasks:** ~150+
 
 **Recently Completed:**
@@ -314,9 +314,14 @@
   - Crystal pedestals in Tower Hub
   - Gate unlock mechanics
   - Tree Bridge, Cracked Wall, Toxic Basin, and Statue puzzles
+- Phase 5: Enemy AI & Combat ✓
+  - 3 enemy types with unique AI behaviors
+  - Crawler (random movement), Chaser (pursuit AI), Sentinel (patrol routes)
+  - Combat system with sword mechanics
+  - Player death and respawn system
 
 **Next Steps:**
-1. Implement enemy AI system (Phase 5)
-2. Add enemy types: Crawler, Chaser, Sentinel
-3. Implement combat system with Sword
-4. Add boss fight with The Void
+1. Implement boss fight with The Void (Phase 6)
+2. Add victory sequence and Ring of Eternity
+3. Implement game state tracking for crystal collection
+4. Add NPC interactions (Owl, Cat)

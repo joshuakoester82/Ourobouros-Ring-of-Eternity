@@ -17,6 +17,7 @@ from src.entities.interactable import (
     ToxicBasin, BlessedSpring, SleeplessStatue, Chasm,
     InteractableType
 )
+from src.entities.enemy import create_enemy, EnemyType
 from src.world.world import World
 from src.world.camera import Camera
 from src.world.screen import Direction, ScreenID
@@ -68,6 +69,9 @@ class Game:
 
         # Add interactables to world
         self._setup_interactables()
+
+        # Add enemies to world
+        self._spawn_enemies()
 
         print(f"Game initialized: {WINDOW_WIDTH}x{WINDOW_HEIGHT} " +
               f"(native: {NATIVE_WIDTH}x{NATIVE_HEIGHT}, scale: {SCALE_FACTOR}x)")
@@ -172,6 +176,40 @@ class Game:
         hub.entities.append(silver_gate)
 
         print("Interactables placed in world")
+
+    def _spawn_enemies(self):
+        """Spawn enemies in various screens"""
+        # Gardens - Crawlers (Tier 1)
+        gardens_2 = self.world.get_screen(ScreenID.GARDENS_2)
+        gardens_2.entities.append(create_enemy(EnemyType.CRAWLER, 40, 60))
+        gardens_2.entities.append(create_enemy(EnemyType.CRAWLER, 100, 80))
+
+        gardens_3 = self.world.get_screen(ScreenID.GARDENS_3)
+        gardens_3.entities.append(create_enemy(EnemyType.CRAWLER, 80, 40))
+
+        # Catacombs - Chasers (Tier 2)
+        catacombs_2 = self.world.get_screen(ScreenID.CATACOMBS_2)
+        catacombs_2.entities.append(create_enemy(EnemyType.CHASER, 100, 100))
+
+        catacombs_3 = self.world.get_screen(ScreenID.CATACOMBS_3)
+        catacombs_3.entities.append(create_enemy(EnemyType.CHASER, 60, 80))
+        catacombs_3.entities.append(create_enemy(EnemyType.CHASER, 90, 60))
+
+        # Ruins - Mix of Crawlers and Chasers
+        ruins_2 = self.world.get_screen(ScreenID.RUINS_2)
+        ruins_2.entities.append(create_enemy(EnemyType.CRAWLER, 50, 100))
+        ruins_2.entities.append(create_enemy(EnemyType.CHASER, 110, 90))
+
+        # Cliffs - Sentinels (Tier 3) with patrol routes
+        cliffs_2 = self.world.get_screen(ScreenID.CLIFFS_2)
+        waypoints_1 = [(40, 40), (120, 40), (120, 140), (40, 140)]
+        cliffs_2.entities.append(create_enemy(EnemyType.SENTINEL, 40, 40, waypoints_1))
+
+        cliffs_3 = self.world.get_screen(ScreenID.CLIFFS_3)
+        waypoints_2 = [(60, 60), (100, 60), (80, 120)]
+        cliffs_3.entities.append(create_enemy(EnemyType.SENTINEL, 60, 60, waypoints_2))
+
+        print("Enemies spawned in world")
 
     def handle_events(self):
         """Handle pygame events"""
@@ -300,6 +338,14 @@ class Game:
             self.player.handle_input()
             self.player.update(current_screen)
 
+            # Update enemies
+            for entity in current_screen.entities:
+                if hasattr(entity, 'enemy_type'):
+                    entity.update(self.player.x, self.player.y, current_screen)
+
+            # Check combat and collisions
+            self._handle_combat(current_screen)
+
             # Check for screen transitions
             transition_dir = self.camera.check_screen_transition(
                 self.player.x, self.player.y,
@@ -318,6 +364,69 @@ class Game:
                     )
                     self.player.x = new_x
                     self.player.y = new_y
+
+    def _handle_combat(self, current_screen):
+        """
+        Handle combat between player and enemies
+
+        Args:
+            current_screen: Current screen
+        """
+        player_has_sword = (self.player.held_item and
+                           hasattr(self.player.held_item, 'item_type') and
+                           self.player.held_item.item_type == ItemType.SWORD)
+
+        for entity in current_screen.entities:
+            if hasattr(entity, 'enemy_type') and entity.alive:
+                # Check collision with player
+                if entity.is_colliding_with_player(
+                    self.player.x, self.player.y,
+                    self.player.width, self.player.height
+                ):
+                    # Check if enemy is immune to sword (Sentinel)
+                    is_immune = hasattr(entity, 'immune_to_sword') and entity.immune_to_sword
+
+                    if player_has_sword and not is_immune:
+                        # Player kills enemy
+                        entity.alive = False
+                        current_screen.entities.remove(entity)
+                        print(f"Defeated enemy!")
+                    else:
+                        # Player dies
+                        self._player_death()
+                        return
+
+        # Check deadly interactables (toxic basin)
+        for entity in current_screen.entities:
+            if hasattr(entity, 'deadly') and entity.deadly:
+                entity_rect = entity.get_rect()
+                player_rect = pygame.Rect(
+                    self.player.x, self.player.y,
+                    self.player.width, self.player.height
+                )
+                if entity_rect.colliderect(player_rect):
+                    self._player_death()
+                    return
+
+    def _player_death(self):
+        """Handle player death"""
+        print("You died! Respawning at Tower Hub...")
+
+        # Drop held item at death location if any
+        if self.player.has_item():
+            current_screen = self.world.get_current_screen()
+            dropped_item = self.player.drop_item()
+            if dropped_item:
+                dropped_item.x = self.player.x
+                dropped_item.y = self.player.y
+                dropped_item.active = True
+                current_screen.entities.append(dropped_item)
+                print(f"Dropped {dropped_item.get_name()} at death location")
+
+        # Respawn player at hub
+        self.world.current_screen_id = ScreenID.TOWER_HUB
+        self.player.x = NATIVE_WIDTH // 2 - 8
+        self.player.y = NATIVE_HEIGHT // 2 - 8
 
     def render(self):
         """Render the game"""
