@@ -51,6 +51,15 @@ class Game:
         # Delta time for frame-independent movement
         self.dt = 0
 
+        # Crystal collection tracking
+        self.crystals_placed = {
+            ItemType.GREEN_CRYSTAL: False,
+            ItemType.RED_CRYSTAL: False,
+            ItemType.BLUE_CRYSTAL: False,
+            ItemType.YELLOW_CRYSTAL: False
+        }
+        self.all_crystals_placed = False
+
         # World and camera
         self.world = World()
         self.camera = Camera()
@@ -174,6 +183,8 @@ class Game:
         # Hub - Silver Gate (blocks path to final chamber)
         silver_gate = Gate(80, 20, 16, 16, InteractableType.SILVER_GATE, ItemType.SILVER_KEY, COLOR_GRAY)
         hub.entities.append(silver_gate)
+        # Store reference for crystal activation
+        self.silver_gate = silver_gate
 
         print("Interactables placed in world")
 
@@ -294,6 +305,14 @@ class Game:
                                 break
                             elif result is True:
                                 # Generic success (like pedestal)
+                                # Check if it's a crystal being placed
+                                if hasattr(entity, 'interactable_type') and 'PEDESTAL' in str(entity.interactable_type):
+                                    crystal_type = held_item.item_type
+                                    if crystal_type in self.crystals_placed:
+                                        self.crystals_placed[crystal_type] = True
+                                        print(f"Crystal placed: {held_item.get_name()}")
+                                        # Check if all crystals are now placed
+                                        self._check_crystal_activation()
                                 # Consume the item
                                 self.player.drop_item()
                                 print(f"{entity.get_name()} activated!")
@@ -428,6 +447,25 @@ class Game:
         self.player.x = NATIVE_WIDTH // 2 - 8
         self.player.y = NATIVE_HEIGHT // 2 - 8
 
+    def _check_crystal_activation(self):
+        """Check if all crystals have been placed and activate accordingly"""
+        if all(self.crystals_placed.values()) and not self.all_crystals_placed:
+            self.all_crystals_placed = True
+            print("\n" + "=" * 50)
+            print("ALL CRYSTALS PLACED!")
+            print("The Tower resonates with elemental power...")
+            print("The Silver Gate has opened!")
+            print("=" * 50 + "\n")
+
+            # Open the silver gate (if it hasn't been opened with a key already)
+            if hasattr(self, 'silver_gate') and not self.silver_gate.is_activated:
+                self.silver_gate.is_activated = True
+                self.silver_gate.solid = False
+                self.silver_gate.active = False
+
+            # Transition to Activation state
+            self.state_machine.change_state(GameState.ACTIVATION)
+
     def render(self):
         """Render the game"""
         # Clear the native surface
@@ -443,7 +481,7 @@ class Game:
             self.player.render(self.native_surface)
 
             # Render HUD
-            self.hud.render(self.native_surface, self.player)
+            self.hud.render(self.native_surface, self.player, self.crystals_placed)
 
         # Scale up the native surface to the window
         scaled_surface = pygame.transform.scale(
