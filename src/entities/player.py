@@ -92,6 +92,16 @@ class Player:
                     self.y = old_y
                     break
 
+            # Check collision with solid interactable objects
+            player_rect = pygame.Rect(self.x, self.y, self.width, self.height)
+            for entity in current_screen.entities:
+                if hasattr(entity, 'solid') and entity.solid and hasattr(entity, 'active') and entity.active:
+                    entity_rect = entity.get_rect()
+                    if player_rect.colliderect(entity_rect):
+                        self.x = old_x
+                        self.y = old_y
+                        break
+
         # Keep player within screen boundaries (allow slightly off-screen for transitions)
         # Extended bounds to allow screen transitions
         self.x = max(-self.width, min(self.x, NATIVE_WIDTH))

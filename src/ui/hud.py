@@ -17,14 +17,31 @@ class HUD:
         pygame.font.init()
         self.font = pygame.font.Font(None, 12)  # Small pixel font
 
-    def render(self, surface: pygame.Surface, player):
+    def render(self, surface: pygame.Surface, player, crystals_placed=None):
         """
         Render the HUD
 
         Args:
             surface: Surface to render to
             player: Player object with inventory
+            crystals_placed: Dict tracking which crystals have been placed
         """
+        # Display crystal count in top-right corner
+        if crystals_placed is not None:
+            crystal_count = sum(1 for placed in crystals_placed.values() if placed)
+            text = self.font.render(f"Crystals: {crystal_count}/4", True, COLOR_WHITE)
+
+            # Draw in top-right
+            padding = 2
+            box_width = text.get_width() + padding * 2
+            box_height = text.get_height() + padding * 2
+            box_x = NATIVE_WIDTH - box_width - 2
+            box_rect = pygame.Rect(box_x, 2, box_width, box_height)
+
+            pygame.draw.rect(surface, COLOR_BLACK, box_rect)
+            pygame.draw.rect(surface, COLOR_WHITE, box_rect, 1)  # Border
+            surface.blit(text, (box_x + padding, 2 + padding))
+
         # Display held item in bottom-left corner
         if player.has_item():
             item = player.held_item
