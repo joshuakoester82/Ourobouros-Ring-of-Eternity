@@ -23,6 +23,7 @@ class World:
         # Build the world
         self._create_screens()
         self._connect_screens()
+        self._add_exit_gaps()  # Add gaps in walls for exits
         self._add_room_layouts()
 
     def _create_screens(self):
@@ -332,6 +333,36 @@ class World:
         self.screens[ScreenID.CLIFFS_3].connect(Direction.WEST, ScreenID.CLIFFS_4)
 
         self.screens[ScreenID.CLIFFS_4].connect(Direction.EAST, ScreenID.CLIFFS_3)
+
+    def _add_exit_gaps(self):
+        """Create gaps in border walls where there are screen connections"""
+        from src.core.constants import NATIVE_HEIGHT, NATIVE_WIDTH
+
+        # Screen dimensions in tiles
+        rows = NATIVE_HEIGHT // 16  # 12 rows
+        cols = NATIVE_WIDTH // 16   # 10 columns
+
+        # For each screen, add gaps based on connections
+        for screen_id, screen in self.screens.items():
+            # North exit - gap in top wall (row 0, middle columns)
+            if screen.get_connection(Direction.NORTH) is not None:
+                screen.set_tile_solid(4, 0, False)  # Center-left
+                screen.set_tile_solid(5, 0, False)  # Center-right
+
+            # South exit - gap in bottom wall (row 11, middle columns)
+            if screen.get_connection(Direction.SOUTH) is not None:
+                screen.set_tile_solid(4, 11, False)  # Center-left
+                screen.set_tile_solid(5, 11, False)  # Center-right
+
+            # East exit - gap in right wall (col 9, middle rows)
+            if screen.get_connection(Direction.EAST) is not None:
+                screen.set_tile_solid(9, 5, False)  # Center-top
+                screen.set_tile_solid(9, 6, False)  # Center-bottom
+
+            # West exit - gap in left wall (col 0, middle rows)
+            if screen.get_connection(Direction.WEST) is not None:
+                screen.set_tile_solid(0, 5, False)  # Center-top
+                screen.set_tile_solid(0, 6, False)  # Center-bottom
 
     def get_current_screen(self) -> Screen:
         """Get the current screen"""
