@@ -30,6 +30,9 @@ class ItemType(Enum):
     SWORD = auto()
     FISH = auto()  # Easter egg
 
+    # Victory item
+    RING_OF_ETERNITY = auto()
+
 
 class Item:
     """
@@ -122,7 +125,8 @@ class Item:
             ItemType.CHALICE_FILLED: "Chalice (Filled)",
             ItemType.FLUTE: "Flute",
             ItemType.SWORD: "Sword",
-            ItemType.FISH: "Fish"
+            ItemType.FISH: "Fish",
+            ItemType.RING_OF_ETERNITY: "Ring of Eternity"
         }
         return names.get(self.item_type, "Unknown Item")
 
@@ -160,8 +164,19 @@ def create_item(item_type: ItemType, x: float, y: float) -> Item:
         ItemType.CHALICE_FILLED: COLOR_BLUE,
         ItemType.FLUTE: (210, 180, 140),  # Tan
         ItemType.SWORD: COLOR_GRAY,
-        ItemType.FISH: COLOR_ORANGE
+        ItemType.FISH: COLOR_ORANGE,
+        ItemType.RING_OF_ETERNITY: COLOR_YELLOW  # Golden circle
     }
 
     color = colors.get(item_type, COLOR_WHITE)
-    return Item(item_type, x, y, color)
+    size = 12 if item_type == ItemType.RING_OF_ETERNITY else 8
+
+    # Create the item
+    item = Item(item_type, x, y, color, size)
+
+    # Special sprite for Ring of Eternity (golden circle)
+    if item_type == ItemType.RING_OF_ETERNITY:
+        item.sprite = pygame.Surface((size, size), pygame.SRCALPHA)
+        pygame.draw.circle(item.sprite, COLOR_YELLOW, (size // 2, size // 2), size // 2, 2)
+
+    return item

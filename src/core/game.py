@@ -60,6 +60,11 @@ class Game:
         }
         self.all_crystals_placed = False
 
+        # Boss fight tracking
+        self.boss = None
+        self.boss_defeated = False
+        self.victory_timer = 0
+
         # World and camera
         self.world = World()
         self.camera = Camera()
@@ -81,6 +86,9 @@ class Game:
 
         # Add enemies to world
         self._spawn_enemies()
+
+        # Setup final chamber
+        self._setup_final_chamber()
 
         print(f"Game initialized: {WINDOW_WIDTH}x{WINDOW_HEIGHT} " +
               f"(native: {NATIVE_WIDTH}x{NATIVE_HEIGHT}, scale: {SCALE_FACTOR}x)")
@@ -222,6 +230,16 @@ class Game:
 
         print("Enemies spawned in world")
 
+    def _setup_final_chamber(self):
+        """Setup the final chamber with boss and ring"""
+        final_chamber = self.world.get_screen(ScreenID.FINAL_CHAMBER)
+
+        # Spawn The Void boss in the center
+        self.boss = create_enemy(EnemyType.VOID, 80, 96)
+        final_chamber.entities.append(self.boss)
+
+        print("Final chamber prepared with The Void")
+
     def handle_events(self):
         """Handle pygame events"""
         for event in pygame.event.get():
@@ -231,11 +249,61 @@ class Game:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
                 elif event.key == pygame.K_SPACE:
-                    self.handle_space_interaction()
+                    # Handle restart in WIN/GAME_OVER states
+                    if self.state_machine.is_state(GameState.WIN) or \
+                       self.state_machine.is_state(GameState.GAME_OVER):
+                        self._restart_game()
+                    else:
+                        self.handle_space_interaction()
+
+    def _restart_game(self):
+        """Restart the game from the beginning"""
+        print("\n" + "=" * 50)
+        print("RESTARTING GAME...")
+        print("=" * 50 + "\n")
+
+        # Reset state machine
+        self.state_machine.change_state(GameState.INIT)
+
+        # Reset crystal tracking
+        self.crystals_placed = {
+            ItemType.GREEN_CRYSTAL: False,
+            ItemType.RED_CRYSTAL: False,
+            ItemType.BLUE_CRYSTAL: False,
+            ItemType.YELLOW_CRYSTAL: False
+        }
+        self.all_crystals_placed = False
+
+        # Reset boss tracking
+        self.boss_defeated = False
+        self.victory_timer = 0
+
+        # Recreate world
+        self.world = World()
+
+        # Reset player
+        self.player = Player(
+            x=NATIVE_WIDTH // 2 - 8,
+            y=NATIVE_HEIGHT // 2 - 8
+        )
+
+        # Respawn items
+        self._spawn_test_items()
+
+        # Reset interactables
+        self._setup_interactables()
+
+        # Respawn enemies
+        self._spawn_enemies()
+
+        # Setup final chamber
+        self._setup_final_chamber()
 
     def handle_space_interaction(self):
         """Handle SPACE key interaction (pickup/drop items, use items on interactables)"""
-        if not self.state_machine.is_state(GameState.EXPLORE):
+        if not (self.state_machine.is_state(GameState.EXPLORE) or
+                self.state_machine.is_state(GameState.ACTIVATION) or
+                self.state_machine.is_state(GameState.CLIMAX)):
             return
 
         current_screen = self.world.get_current_screen()
@@ -337,7 +405,16 @@ class Game:
                         self.player.x, self.player.y,
                         self.player.width, self.player.height
                     ):
-                        if self.player.pick_up_item(entity):
+                        # Check if it's the Ring of Eternity
+                        if entity.item_type == ItemType.RING_OF_ETERNITY:
+                            print("\n" + "=" * 50)
+                            print("YOU HAVE CLAIMED THE RING OF ETERNITY!")
+                            print("=" * 50 + "\n")
+                            entity.active = False
+                            current_screen.entities.remove(entity)
+                            self.state_machine.change_state(GameState.WIN)
+                            break
+                        elif self.player.pick_up_item(entity):
                             entity.active = False
                             current_screen.entities.remove(entity)
                             print(f"Picked up: {entity.get_name()}")
@@ -349,9 +426,24 @@ class Game:
         if self.state_machine.is_state(GameState.INIT):
             # Initialize game world, then transition to EXPLORE
             self.state_machine.change_state(GameState.EXPLORE)
-        elif self.state_machine.is_state(GameState.EXPLORE):
+        elif self.state_machine.is_state(GameState.EXPLORE) or self.state_machine.is_state(GameState.ACTIVATION):
             # Get current screen
             current_screen = self.world.get_current_screen()
+
+            # Check for final chamber entry (special transition)
+            if self.world.current_screen_id == ScreenID.TOWER_HUB and self.all_crystals_placed:
+                # If player is near the silver gate (top center), enter final chamber
+                gate_x, gate_y = 80, 20
+                if abs(self.player.x - gate_x) < 20 and abs(self.player.y - gate_y) < 20:
+                    if self.player.y < 30:  # Moving upward through gate
+                        self.world.current_screen_id = ScreenID.FINAL_CHAMBER
+                        self.player.x = NATIVE_WIDTH // 2 - 8
+                        self.player.y = NATIVE_HEIGHT - 32
+                        self.state_machine.change_state(GameState.CLIMAX)
+                        print("\n" + "=" * 50)
+                        print("ENTERING THE FINAL CHAMBER...")
+                        print("=" * 50 + "\n")
+                        return
 
             # Update player
             self.player.handle_input()
@@ -383,6 +475,65 @@ class Game:
                     )
                     self.player.x = new_x
                     self.player.y = new_y
+
+        elif self.state_machine.is_state(GameState.CLIMAX):
+            # Boss fight state
+            current_screen = self.world.get_current_screen()
+
+            # Update player
+            self.player.handle_input()
+            self.player.update(current_screen)
+
+            # Update boss
+            if self.boss and self.boss.alive:
+                self.boss.update(self.player.x, self.player.y, current_screen)
+
+                # Check if player hit boss with sword
+                player_has_sword = (self.player.held_item and
+                                   hasattr(self.player.held_item, 'item_type') and
+                                   self.player.held_item.item_type == ItemType.SWORD)
+
+                if player_has_sword and self.boss.is_colliding_with_player(
+                    self.player.x, self.player.y,
+                    self.player.width, self.player.height
+                ):
+                    # Boss takes hit
+                    defeated = self.boss.take_hit(self.player.x, self.player.y)
+                    if defeated:
+                        self.boss.alive = False
+                        self.boss_defeated = True
+                        # Spawn Ring of Eternity
+                        ring = create_item(ItemType.RING_OF_ETERNITY, NATIVE_WIDTH // 2 - 6, NATIVE_HEIGHT // 2 - 6)
+                        current_screen.entities.append(ring)
+                        print("\n" + "=" * 50)
+                        print("THE VOID HAS BEEN DEFEATED!")
+                        print("The Ring of Eternity appears...")
+                        print("=" * 50 + "\n")
+
+                # Check if player is hit by boss or projectiles
+                if self.boss.is_colliding_with_player(
+                    self.player.x, self.player.y,
+                    self.player.width, self.player.height
+                ) and not player_has_sword:
+                    self._player_death()
+                    return
+
+                # Check projectile collisions
+                for projectile in self.boss.projectiles:
+                    if projectile.is_colliding_with_player(
+                        self.player.x, self.player.y,
+                        self.player.width, self.player.height
+                    ):
+                        self._player_death()
+                        return
+
+        elif self.state_machine.is_state(GameState.WIN):
+            # Victory state - wait for restart
+            self.victory_timer += 1
+
+        elif self.state_machine.is_state(GameState.GAME_OVER):
+            # Game over - wait for restart
+            pass
 
     def _handle_combat(self, current_screen):
         """
@@ -472,7 +623,9 @@ class Game:
         self.native_surface.fill(COLOR_BLACK)
 
         # Render game objects to native surface
-        if self.state_machine.is_state(GameState.EXPLORE):
+        if self.state_machine.is_state(GameState.EXPLORE) or \
+           self.state_machine.is_state(GameState.ACTIVATION) or \
+           self.state_machine.is_state(GameState.CLIMAX):
             # Render current screen
             current_screen = self.world.get_current_screen()
             current_screen.render(self.native_surface)
@@ -483,6 +636,14 @@ class Game:
             # Render HUD
             self.hud.render(self.native_surface, self.player, self.crystals_placed)
 
+        elif self.state_machine.is_state(GameState.WIN):
+            # Victory screen
+            self._render_victory_screen()
+
+        elif self.state_machine.is_state(GameState.GAME_OVER):
+            # Game over screen (currently unused, but prepared)
+            self._render_game_over_screen()
+
         # Scale up the native surface to the window
         scaled_surface = pygame.transform.scale(
             self.native_surface,
@@ -492,6 +653,59 @@ class Game:
 
         # Update the display
         pygame.display.flip()
+
+    def _render_victory_screen(self):
+        """Render the victory screen"""
+        # Fill with dark background
+        self.native_surface.fill((10, 10, 20))
+
+        # Initialize font
+        pygame.font.init()
+        font_large = pygame.font.Font(None, 24)
+        font_small = pygame.font.Font(None, 16)
+
+        # Main victory text
+        text1 = font_large.render("A NEW CYCLE", True, COLOR_YELLOW)
+        text2 = font_large.render("BEGINS", True, COLOR_YELLOW)
+
+        # Center the text
+        x1 = (NATIVE_WIDTH - text1.get_width()) // 2
+        y1 = NATIVE_HEIGHT // 2 - 40
+        x2 = (NATIVE_WIDTH - text2.get_width()) // 2
+        y2 = y1 + 30
+
+        self.native_surface.blit(text1, (x1, y1))
+        self.native_surface.blit(text2, (x2, y2))
+
+        # Restart instruction (blinking)
+        if (self.victory_timer // 30) % 2 == 0:  # Blink every 0.5 seconds
+            restart_text = font_small.render("Press SPACE to Restart", True, COLOR_WHITE)
+            rx = (NATIVE_WIDTH - restart_text.get_width()) // 2
+            ry = NATIVE_HEIGHT - 40
+            self.native_surface.blit(restart_text, (rx, ry))
+
+    def _render_game_over_screen(self):
+        """Render the game over screen"""
+        # Fill with dark background
+        self.native_surface.fill((20, 10, 10))
+
+        # Initialize font
+        pygame.font.init()
+        font_large = pygame.font.Font(None, 24)
+        font_small = pygame.font.Font(None, 16)
+
+        # Game over text
+        text = font_large.render("GAME OVER", True, COLOR_RED)
+        x = (NATIVE_WIDTH - text.get_width()) // 2
+        y = NATIVE_HEIGHT // 2 - 20
+
+        self.native_surface.blit(text, (x, y))
+
+        # Restart instruction
+        restart_text = font_small.render("Press SPACE to Restart", True, COLOR_WHITE)
+        rx = (NATIVE_WIDTH - restart_text.get_width()) // 2
+        ry = NATIVE_HEIGHT - 40
+        self.native_surface.blit(restart_text, (rx, ry))
 
     def run(self):
         """Main game loop"""

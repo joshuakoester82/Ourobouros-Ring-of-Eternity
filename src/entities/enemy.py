@@ -18,6 +18,7 @@ class EnemyType(Enum):
     CRAWLER = auto()  # Tier 1: Random movement
     CHASER = auto()   # Tier 2: Chases player
     SENTINEL = auto() # Tier 3: Patrols fixed route
+    VOID = auto()     # Boss: Flickering polygon
 
 
 class Enemy:
@@ -351,6 +352,232 @@ class Sentinel(Enemy):
             self.y += move_y
 
 
+class Projectile:
+    """
+    Projectile fired by The Void boss
+    """
+
+    def __init__(self, x: float, y: float, target_x: float, target_y: float, speed: float = 2.0):
+        """
+        Initialize a projectile
+
+        Args:
+            x: Starting X position
+            y: Starting Y position
+            target_x: Target X position (player)
+            target_y: Target Y position (player)
+            speed: Movement speed
+        """
+        self.x = x
+        self.y = y
+        self.size = 8
+        self.speed = speed
+        self.active = True
+        self.color = (255, 0, 255)  # Magenta
+
+        # Calculate direction
+        dx = target_x - x
+        dy = target_y - y
+        distance = math.sqrt(dx * dx + dy * dy)
+        if distance > 0:
+            self.velocity_x = (dx / distance) * speed
+            self.velocity_y = (dy / distance) * speed
+        else:
+            self.velocity_x = 0
+            self.velocity_y = 0
+
+        # Create sprite
+        self.sprite = pygame.Surface((self.size, self.size))
+        self.sprite.fill(self.color)
+
+    def update(self):
+        """Update projectile position"""
+        self.x += self.velocity_x
+        self.y += self.velocity_y
+
+        # Deactivate if out of bounds
+        if self.x < 0 or self.x > NATIVE_WIDTH or self.y < 0 or self.y > NATIVE_HEIGHT:
+            self.active = False
+
+    def get_rect(self) -> pygame.Rect:
+        """Get the projectile's bounding rectangle"""
+        return pygame.Rect(self.x, self.y, self.size, self.size)
+
+    def is_colliding_with_player(self, player_x: float, player_y: float,
+                                  player_width: int, player_height: int) -> bool:
+        """Check if projectile hit the player"""
+        proj_rect = self.get_rect()
+        player_rect = pygame.Rect(player_x, player_y, player_width, player_height)
+        return proj_rect.colliderect(player_rect)
+
+    def render(self, surface: pygame.Surface):
+        """Render the projectile"""
+        if self.active:
+            surface.blit(self.sprite, (int(self.x), int(self.y)))
+
+
+class TheVoid(Enemy):
+    """
+    Final Boss: The Void - A flickering geometric polygon
+    """
+
+    def __init__(self, x: float, y: float):
+        super().__init__(EnemyType.VOID, x, y, 24, (255, 255, 255), 3.0)
+
+        # Boss properties
+        self.hits_remaining = 3
+        self.immune_to_sword = False
+        self.invulnerable = False
+        self.invulnerable_timer = 0
+
+        # Movement
+        self.velocity_x = random.uniform(-1, 1) * self.speed
+        self.velocity_y = random.uniform(-1, 1) * self.speed
+
+        # Visual effects
+        self.flicker_timer = 0
+        self.current_shape = "square"
+        self.shapes = ["square", "triangle", "pentagon", "hexagon"]
+
+        # Projectiles
+        self.projectiles: List[Projectile] = []
+        self.shoot_cooldown = 0
+
+        # Create initial sprite
+        self._create_sprite()
+
+    def _create_sprite(self):
+        """Create a flickering geometric shape sprite"""
+        # Random color
+        colors = [
+            (255, 0, 0),    # Red
+            (0, 255, 0),    # Green
+            (0, 0, 255),    # Blue
+            (255, 255, 0),  # Yellow
+            (255, 0, 255),  # Magenta
+            (0, 255, 255),  # Cyan
+            (255, 255, 255) # White
+        ]
+        self.color = random.choice(colors)
+
+        # Create surface
+        self.sprite = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+
+        # Draw shape based on current shape
+        center = self.size // 2
+        if self.current_shape == "square":
+            pygame.draw.rect(self.sprite, self.color, (4, 4, 16, 16), 0)
+        elif self.current_shape == "triangle":
+            points = [(center, 4), (4, 20), (20, 20)]
+            pygame.draw.polygon(self.sprite, self.color, points)
+        elif self.current_shape == "pentagon":
+            # Simple approximation
+            points = [(center, 2), (22, 10), (18, 22), (6, 22), (2, 10)]
+            pygame.draw.polygon(self.sprite, self.color, points)
+        else:  # hexagon
+            points = [(center, 2), (20, 8), (20, 16), (center, 22), (4, 16), (4, 8)]
+            pygame.draw.polygon(self.sprite, self.color, points)
+
+    def take_hit(self, player_x: float, player_y: float):
+        """
+        Boss takes a hit from the sword
+
+        Args:
+            player_x: Player X position for projectile targeting
+            player_y: Player Y position for projectile targeting
+
+        Returns:
+            True if boss is defeated, False otherwise
+        """
+        if self.invulnerable:
+            return False
+
+        self.hits_remaining -= 1
+        print(f"The Void hit! {self.hits_remaining} hits remaining")
+
+        if self.hits_remaining <= 0:
+            print("The Void dissipates!")
+            return True
+
+        # Teleport to random corner
+        corners = [
+            (40, 40),
+            (NATIVE_WIDTH - 64, 40),
+            (40, NATIVE_HEIGHT - 64),
+            (NATIVE_WIDTH - 64, NATIVE_HEIGHT - 64)
+        ]
+        self.x, self.y = random.choice(corners)
+
+        # Shoot projectile at player
+        projectile = Projectile(
+            self.x + self.size // 2,
+            self.y + self.size // 2,
+            player_x, player_y
+        )
+        self.projectiles.append(projectile)
+
+        # New random velocity
+        self.velocity_x = random.uniform(-1, 1) * self.speed
+        self.velocity_y = random.uniform(-1, 1) * self.speed
+
+        # Brief invulnerability
+        self.invulnerable = True
+        self.invulnerable_timer = 30  # 0.5 seconds
+
+        return False
+
+    def update(self, player_x: float, player_y: float, current_screen=None):
+        """Update The Void boss AI"""
+        if not self.alive:
+            return
+
+        # Handle invulnerability
+        if self.invulnerable:
+            self.invulnerable_timer -= 1
+            if self.invulnerable_timer <= 0:
+                self.invulnerable = False
+
+        # Flicker effect - change shape every few frames
+        self.flicker_timer += 1
+        if self.flicker_timer > 10:  # Change every ~0.16 seconds
+            self.flicker_timer = 0
+            self.current_shape = random.choice(self.shapes)
+            self._create_sprite()
+
+        # Bouncing movement
+        self.x += self.velocity_x
+        self.y += self.velocity_y
+
+        # Bounce off walls
+        if self.x < 32 or self.x > NATIVE_WIDTH - self.size - 32:
+            self.velocity_x = -self.velocity_x
+            self.x = max(32, min(self.x, NATIVE_WIDTH - self.size - 32))
+        if self.y < 32 or self.y > NATIVE_HEIGHT - self.size - 32:
+            self.velocity_y = -self.velocity_y
+            self.y = max(32, min(self.y, NATIVE_HEIGHT - self.size - 32))
+
+        # Update projectiles
+        for projectile in self.projectiles[:]:
+            projectile.update()
+            if not projectile.active:
+                self.projectiles.remove(projectile)
+
+        # Shoot cooldown
+        if self.shoot_cooldown > 0:
+            self.shoot_cooldown -= 1
+
+    def render(self, surface: pygame.Surface):
+        """Render The Void boss and its projectiles"""
+        if self.active and self.alive:
+            # Render boss with flicker effect
+            if not self.invulnerable or (self.invulnerable_timer % 4 < 2):
+                surface.blit(self.sprite, (int(self.x), int(self.y)))
+
+            # Render projectiles
+            for projectile in self.projectiles:
+                projectile.render(surface)
+
+
 def create_enemy(enemy_type: EnemyType, x: float, y: float,
                  waypoints: Optional[List[Tuple[float, float]]] = None) -> Enemy:
     """
@@ -371,5 +598,7 @@ def create_enemy(enemy_type: EnemyType, x: float, y: float,
         return Chaser(x, y)
     elif enemy_type == EnemyType.SENTINEL:
         return Sentinel(x, y, waypoints or [])
+    elif enemy_type == EnemyType.VOID:
+        return TheVoid(x, y)
     else:
         return Enemy(enemy_type, x, y)
