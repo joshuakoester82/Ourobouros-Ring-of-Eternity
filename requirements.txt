@@ -1,0 +1,13 @@
+# Ouroboros - Ring of Eternity Dependencies
+
+# Core game engine
+pygame-ce>=2.4.0  # Pygame Community Edition
+
+# Audio generation
+numpy>=1.24.0     # For procedural sound generation with pygame.mixer
+
+# Optional but useful
+# Uncomment if needed for development:
+# pytest>=7.4.0      # For testing
+# black>=23.0.0      # Code formatting
+# pylint>=2.17.0     # Linting
