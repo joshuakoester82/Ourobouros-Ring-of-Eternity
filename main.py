@@ -6,16 +6,17 @@ A retro Atari 2600-style action-adventure game
 Main entry point for the game.
 """
 
+from src.core.game import Game
+
+
 def main():
     """Main game entry point"""
     print("Ouroboros - Ring of Eternity")
     print("=" * 40)
-    print("Game initialization will go here...")
-    print("\nPress Ctrl+C to exit")
 
-    # TODO: Initialize Pygame
-    # TODO: Create game window
-    # TODO: Start main game loop
+    # Create and run the game
+    game = Game()
+    game.run()
 
 
 if __name__ == "__main__":
