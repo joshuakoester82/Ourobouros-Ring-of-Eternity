@@ -23,6 +23,8 @@ from src.world.world import World
 from src.world.camera import Camera
 from src.world.screen import Direction, ScreenID
 from src.ui.hud import HUD
+from src.ui.crt_effect import CRTEffectScaled
+from src.ui.particles import ParticleSystem
 from src.audio import SoundManager, SoundType, AmbientManager, AmbienceType
 
 
@@ -76,6 +78,13 @@ class Game:
 
         # HUD
         self.hud = HUD()
+
+        # CRT Effect for retro aesthetic
+        self.crt_effect = CRTEffectScaled(WINDOW_WIDTH, WINDOW_HEIGHT, intensity=0.25)
+        self.crt_enabled = True  # Can be toggled
+
+        # Particle system for visual effects
+        self.particles = ParticleSystem()
 
         # Audio
         self.sound_manager = SoundManager()
@@ -279,6 +288,11 @@ class Game:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
+                elif event.key == pygame.K_c:
+                    # Toggle CRT effect
+                    self.crt_enabled = not self.crt_enabled
+                    status = "ON" if self.crt_enabled else "OFF"
+                    print(f"CRT Effect: {status}")
                 elif event.key == pygame.K_SPACE:
                     # Handle restart in WIN/GAME_OVER states
                     if self.state_machine.is_state(GameState.WIN) or \
@@ -391,6 +405,10 @@ class Game:
                                 entity.solid = False
                                 entity.active = False
                                 self.sound_manager.play_sound(SoundType.BOMB_TIMER)
+                                # Add explosion particle effect
+                                self.particles.add_explosion(entity.x + entity.width // 2,
+                                                            entity.y + entity.height // 2,
+                                                            color=(255, 150, 0), count=20)
                                 print("Bomb placed! The wall crumbles!")
                                 # Respawn bomb at original location
                                 catacombs_2 = self.world.get_screen(ScreenID.CATACOMBS_2)
@@ -415,12 +433,19 @@ class Game:
                                     if crystal_type in self.crystals_placed:
                                         self.crystals_placed[crystal_type] = True
                                         self.sound_manager.play_sound(SoundType.CRYSTAL_PLACE)
+                                        # Add sparkle effect at pedestal
+                                        self.particles.add_sparkle(entity.x + entity.width // 2,
+                                                                   entity.y + entity.height // 2,
+                                                                   held_item.color)
                                         print(f"Crystal placed: {held_item.get_name()}")
                                         # Check if all crystals are now placed
                                         self._check_crystal_activation()
                                 # Check for gate opening
                                 elif hasattr(entity, 'interactable_type') and 'GATE' in str(entity.interactable_type):
                                     self.sound_manager.play_sound(SoundType.GATE_OPEN)
+                                    # Add dust puff when gate opens
+                                    self.particles.add_dust(entity.x + entity.width // 2,
+                                                           entity.y + entity.height)
                                 # Consume the item
                                 self.player.drop_item()
                                 print(f"{entity.get_name()} activated!")
@@ -523,6 +548,9 @@ class Game:
                 if hasattr(entity, 'npc_type'):
                     entity.update(self.player.x, self.player.y, self.player.held_item)
 
+            # Update particles
+            self.particles.update()
+
             # Check combat and collisions
             self._handle_combat(current_screen)
 
@@ -569,6 +597,9 @@ class Game:
             # Update player
             self.player.handle_input()
             self.player.update(current_screen)
+
+            # Update particles
+            self.particles.update()
 
             # Update boss
             if self.boss and self.boss.alive:
@@ -648,6 +679,11 @@ class Game:
                         current_screen.entities.remove(entity)
                         self.sound_manager.play_sound(SoundType.SWORD_HIT)
                         self.sound_manager.play_sound(SoundType.ENEMY_DEATH)
+                        # Add small explosion effect at enemy position
+                        enemy_color = getattr(entity, 'color', (100, 100, 100))
+                        self.particles.add_explosion(entity.x + entity.width // 2,
+                                                     entity.y + entity.height // 2,
+                                                     color=enemy_color, count=10)
                         print(f"Defeated enemy!")
                     else:
                         # Player dies
@@ -737,6 +773,9 @@ class Game:
             # Render player
             self.player.render(self.native_surface)
 
+            # Render particles (on top of entities but below HUD)
+            self.particles.render(self.native_surface)
+
             # Render HUD
             self.hud.render(self.native_surface, self.player, self.crystals_placed)
 
@@ -753,6 +792,11 @@ class Game:
             self.native_surface,
             (WINDOW_WIDTH, WINDOW_HEIGHT)
         )
+
+        # Apply CRT effect if enabled
+        if self.crt_enabled:
+            scaled_surface = self.crt_effect.apply(scaled_surface)
+
         self.window.blit(scaled_surface, (0, 0))
 
         # Update the display
