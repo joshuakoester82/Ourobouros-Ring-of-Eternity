@@ -11,6 +11,9 @@ from src.core.constants import (
 )
 from src.core.state_machine import StateMachine, GameState
 from src.entities.player import Player
+from src.world.world import World
+from src.world.camera import Camera
+from src.world.screen import Direction
 
 
 class Game:
@@ -40,6 +43,10 @@ class Game:
         # Delta time for frame-independent movement
         self.dt = 0
 
+        # World and camera
+        self.world = World()
+        self.camera = Camera()
+
         # Player (spawn in center of screen)
         self.player = Player(
             x=NATIVE_WIDTH // 2 - 8,
@@ -48,6 +55,7 @@ class Game:
 
         print(f"Game initialized: {WINDOW_WIDTH}x{WINDOW_HEIGHT} " +
               f"(native: {NATIVE_WIDTH}x{NATIVE_HEIGHT}, scale: {SCALE_FACTOR}x)")
+        print(f"Starting in: {self.world.get_current_screen().name}")
 
     def handle_events(self):
         """Handle pygame events"""
@@ -65,9 +73,31 @@ class Game:
             # Initialize game world, then transition to EXPLORE
             self.state_machine.change_state(GameState.EXPLORE)
         elif self.state_machine.is_state(GameState.EXPLORE):
+            # Get current screen
+            current_screen = self.world.get_current_screen()
+
             # Update player
             self.player.handle_input()
-            self.player.update()
+            self.player.update(current_screen)
+
+            # Check for screen transitions
+            transition_dir = self.camera.check_screen_transition(
+                self.player.x, self.player.y,
+                self.player.width, self.player.height
+            )
+
+            if transition_dir is not None:
+                # Attempt to change screens
+                if self.world.change_screen(transition_dir):
+                    # Move player to opposite side of new screen
+                    opposite = self.camera.get_opposite_direction(transition_dir)
+                    new_x, new_y = self.camera.get_player_spawn_position(
+                        opposite,
+                        self.player.width,
+                        self.player.height
+                    )
+                    self.player.x = new_x
+                    self.player.y = new_y
 
     def render(self):
         """Render the game"""
@@ -76,6 +106,10 @@ class Game:
 
         # Render game objects to native surface
         if self.state_machine.is_state(GameState.EXPLORE):
+            # Render current screen
+            current_screen = self.world.get_current_screen()
+            current_screen.render(self.native_surface)
+
             # Render player
             self.player.render(self.native_surface)
 

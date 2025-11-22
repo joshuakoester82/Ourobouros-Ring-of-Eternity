@@ -60,15 +60,42 @@ class Player:
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             self.velocity_y = self.speed
 
-    def update(self):
-        """Update player position"""
+    def update(self, current_screen=None):
+        """
+        Update player position
+
+        Args:
+            current_screen: Current screen for collision detection
+        """
+        # Store old position for collision recovery
+        old_x = self.x
+        old_y = self.y
+
         # Update position based on velocity
         self.x += self.velocity_x
         self.y += self.velocity_y
 
-        # Keep player within screen boundaries
-        self.x = max(0, min(self.x, NATIVE_WIDTH - self.width))
-        self.y = max(0, min(self.y, NATIVE_HEIGHT - self.height))
+        # Check collision with screen if provided
+        if current_screen is not None:
+            # Check all four corners of the player
+            corners = [
+                (self.x, self.y),  # Top-left
+                (self.x + self.width - 1, self.y),  # Top-right
+                (self.x, self.y + self.height - 1),  # Bottom-left
+                (self.x + self.width - 1, self.y + self.height - 1)  # Bottom-right
+            ]
+
+            # If any corner collides with a solid tile, revert position
+            for corner_x, corner_y in corners:
+                if current_screen.is_tile_solid(corner_x, corner_y):
+                    self.x = old_x
+                    self.y = old_y
+                    break
+
+        # Keep player within screen boundaries (allow slightly off-screen for transitions)
+        # Extended bounds to allow screen transitions
+        self.x = max(-self.width, min(self.x, NATIVE_WIDTH))
+        self.y = max(-self.height, min(self.y, NATIVE_HEIGHT))
 
     def render(self, surface: pygame.Surface):
         """
