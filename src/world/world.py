@@ -23,6 +23,7 @@ class World:
         # Build the world
         self._create_screens()
         self._connect_screens()
+        self._add_room_layouts()
 
     def _create_screens(self):
         """Create all 24 screens"""
@@ -132,6 +133,148 @@ class World:
             "The Final Chamber",
             final_color
         )
+
+    def _add_room_layouts(self):
+        """Add detailed wall layouts to each room for visual interest and challenge"""
+        # Tower Hub - Four pillars in corners + central area
+        hub = self.screens[ScreenID.TOWER_HUB]
+        # Corner pillars (2x2 tiles each)
+        for px, py in [(1, 1), (7, 1), (1, 9), (7, 9)]:
+            hub.set_tile_solid(px, py, True)
+            hub.set_tile_solid(px+1, py, True)
+            hub.set_tile_solid(px, py+1, True)
+            hub.set_tile_solid(px+1, py+1, True)
+
+        # Gardens 1 - Entrance with side bushes
+        g1 = self.screens[ScreenID.GARDENS_1]
+        # Side obstacles
+        for y in range(2, 5):
+            g1.set_tile_solid(2, y, True)
+            g1.set_tile_solid(7, y, True)
+
+        # Gardens 2 - Open area with scattered obstacles
+        g2 = self.screens[ScreenID.GARDENS_2]
+        g2.set_tile_solid(3, 4, True)
+        g2.set_tile_solid(6, 7, True)
+        g2.set_tile_solid(4, 9, True)
+
+        # Gardens 3 - Path with obstacles (chasm puzzle area)
+        g3 = self.screens[ScreenID.GARDENS_3]
+        # L-shaped wall
+        for x in range(2, 5):
+            g3.set_tile_solid(x, 3, True)
+        for y in range(3, 7):
+            g3.set_tile_solid(4, y, True)
+
+        # Gardens 4 - Narrow passages leading to tree
+        g4 = self.screens[ScreenID.GARDENS_4]
+        for y in range(1, 6):
+            g4.set_tile_solid(3, y, True)
+        for y in range(7, 11):
+            g4.set_tile_solid(6, y, True)
+
+        # Catacombs 1 - Narrow entrance corridor
+        c1 = self.screens[ScreenID.CATACOMBS_1]
+        # Side walls creating corridor
+        for y in range(1, 8):
+            c1.set_tile_solid(3, y, True)
+            c1.set_tile_solid(6, y, True)
+
+        # Catacombs 2 - Chamber with pillars
+        c2 = self.screens[ScreenID.CATACOMBS_2]
+        c2.set_tile_solid(3, 4, True)
+        c2.set_tile_solid(6, 4, True)
+        c2.set_tile_solid(3, 8, True)
+        c2.set_tile_solid(6, 8, True)
+
+        # Catacombs 3 - Ogre's lair with alcoves
+        c3 = self.screens[ScreenID.CATACOMBS_3]
+        # Create alcoves
+        for x in range(1, 3):
+            c3.set_tile_solid(x, 4, True)
+            c3.set_tile_solid(x, 8, True)
+        for x in range(7, 9):
+            c3.set_tile_solid(x, 4, True)
+            c3.set_tile_solid(x, 8, True)
+
+        # Catacombs 4 - Cracked wall room with obstacles
+        c4 = self.screens[ScreenID.CATACOMBS_4]
+        # Scattered rubble
+        c4.set_tile_solid(2, 3, True)
+        c4.set_tile_solid(7, 3, True)
+        c4.set_tile_solid(2, 9, True)
+        c4.set_tile_solid(7, 9, True)
+
+        # Ruins 1 - Flooded entrance
+        r1 = self.screens[ScreenID.RUINS_1]
+        # Broken walls
+        for x in range(2, 4):
+            r1.set_tile_solid(x, 5, True)
+        for x in range(6, 8):
+            r1.set_tile_solid(x, 7, True)
+
+        # Ruins 2 - Maze layout
+        r2 = self.screens[ScreenID.RUINS_2]
+        # Create maze walls
+        for y in range(2, 7):
+            r2.set_tile_solid(3, y, True)
+        for x in range(5, 8):
+            r2.set_tile_solid(x, 5, True)
+        r2.set_tile_solid(5, 8, True)
+        r2.set_tile_solid(5, 9, True)
+
+        # Ruins 3 - Toxic basin room with careful paths
+        r3 = self.screens[ScreenID.RUINS_3]
+        # Narrow paths around basin
+        for x in range(2, 4):
+            r3.set_tile_solid(x, 3, True)
+        for x in range(6, 8):
+            r3.set_tile_solid(x, 3, True)
+
+        # Ruins 4 - Blessed Spring chamber
+        r4 = self.screens[ScreenID.RUINS_4]
+        # Pool edges
+        for x in range(4, 7):
+            r4.set_tile_solid(x, 4, True)
+            r4.set_tile_solid(x, 9, True)
+
+        # Cliffs 1 - Windy entrance
+        cl1 = self.screens[ScreenID.CLIFFS_1]
+        # Scattered rocks
+        cl1.set_tile_solid(2, 4, True)
+        cl1.set_tile_solid(7, 6, True)
+        cl1.set_tile_solid(4, 9, True)
+
+        # Cliffs 2 - Flute chamber with platforms
+        cl2 = self.screens[ScreenID.CLIFFS_2]
+        # Platform-like obstacles
+        for x in range(2, 4):
+            cl2.set_tile_solid(x, 3, True)
+        for x in range(6, 8):
+            cl2.set_tile_solid(x, 8, True)
+
+        # Cliffs 3 - Ascending platforms
+        cl3 = self.screens[ScreenID.CLIFFS_3]
+        # Step-like pattern
+        cl3.set_tile_solid(2, 8, True)
+        cl3.set_tile_solid(3, 6, True)
+        cl3.set_tile_solid(5, 4, True)
+        cl3.set_tile_solid(7, 2, True)
+
+        # Cliffs 4 - Statue chamber
+        cl4 = self.screens[ScreenID.CLIFFS_4]
+        # Create a chamber feel
+        for y in range(3, 6):
+            cl4.set_tile_solid(2, y, True)
+            cl4.set_tile_solid(7, y, True)
+
+        # Final Chamber - Boss arena with corner pillars
+        final = self.screens[ScreenID.FINAL_CHAMBER]
+        # Just corner markers for dramatic effect
+        final.set_tile_solid(2, 2, True)
+        final.set_tile_solid(7, 2, True)
+        final.set_tile_solid(2, 9, True)
+        final.set_tile_solid(7, 9, True)
 
     def _connect_screens(self):
         """Set up connections between screens"""
