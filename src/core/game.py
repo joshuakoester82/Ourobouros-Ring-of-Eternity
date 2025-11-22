@@ -7,11 +7,16 @@ from src.core.constants import (
     NATIVE_WIDTH, NATIVE_HEIGHT,
     WINDOW_WIDTH, WINDOW_HEIGHT,
     SCALE_FACTOR, FPS, GAME_TITLE,
-    COLOR_BLACK
+    COLOR_BLACK, COLOR_GRAY, COLOR_YELLOW
 )
 from src.core.state_machine import StateMachine, GameState
 from src.entities.player import Player
 from src.entities.item import create_item, ItemType
+from src.entities.interactable import (
+    Pedestal, Gate, Fountain, SoftDirt, CrackedWall,
+    ToxicBasin, BlessedSpring, SleeplessStatue, Chasm,
+    InteractableType
+)
 from src.world.world import World
 from src.world.camera import Camera
 from src.world.screen import Direction, ScreenID
@@ -61,6 +66,9 @@ class Game:
         # Spawn test items
         self._spawn_test_items()
 
+        # Add interactables to world
+        self._setup_interactables()
+
         print(f"Game initialized: {WINDOW_WIDTH}x{WINDOW_HEIGHT} " +
               f"(native: {NATIVE_WIDTH}x{NATIVE_HEIGHT}, scale: {SCALE_FACTOR}x)")
         print(f"Starting in: {self.world.get_current_screen().name}")
@@ -106,6 +114,65 @@ class Game:
 
         print("Test items spawned in world")
 
+    def _setup_interactables(self):
+        """Add interactable objects to the world"""
+        # Tower Hub - Add crystal pedestals
+        hub = self.world.get_screen(ScreenID.TOWER_HUB)
+
+        # Four corner pedestals with colored outlines
+        from src.core.constants import COLOR_GREEN, COLOR_RED, COLOR_BLUE, COLOR_YELLOW
+        pedestal_green = Pedestal(24, 24, ItemType.GREEN_CRYSTAL, COLOR_GREEN)
+        pedestal_red = Pedestal(120, 24, ItemType.RED_CRYSTAL, COLOR_RED)
+        pedestal_blue = Pedestal(24, 152, ItemType.BLUE_CRYSTAL, COLOR_BLUE)
+        pedestal_yellow = Pedestal(120, 152, ItemType.YELLOW_CRYSTAL, COLOR_YELLOW)
+
+        hub.entities.extend([pedestal_green, pedestal_red, pedestal_blue, pedestal_yellow])
+
+        # Add fountain in hub for watering can refills
+        fountain = Fountain(80, 96)
+        hub.entities.append(fountain)
+
+        # Gardens - Tree Bridge puzzle
+        gardens_3 = self.world.get_screen(ScreenID.GARDENS_3)
+        soft_dirt = SoftDirt(48, 80)
+        gardens_3.entities.append(soft_dirt)
+
+        gardens_4 = self.world.get_screen(ScreenID.GARDENS_4)
+        chasm = Chasm(64, 48, 32, 16)  # Horizontal chasm
+        gardens_4.entities.append(chasm)
+        # Store reference for puzzle
+        self.tree_chasm = chasm
+        self.tree_dirt = soft_dirt
+
+        # Catacombs - Gold Gate and Cracked Wall
+        catacombs_1 = self.world.get_screen(ScreenID.CATACOMBS_1)
+        gold_gate = Gate(72, 48, 16, 32, InteractableType.GOLD_GATE, ItemType.GOLD_KEY, COLOR_YELLOW)
+        catacombs_1.entities.append(gold_gate)
+
+        catacombs_4 = self.world.get_screen(ScreenID.CATACOMBS_4)
+        cracked_wall = CrackedWall(80, 64)
+        catacombs_4.entities.append(cracked_wall)
+
+        # Ruins - Toxic Basin and Blessed Spring
+        ruins_3 = self.world.get_screen(ScreenID.RUINS_3)
+        toxic_basin = ToxicBasin(60, 80, 24, 24)
+        ruins_3.entities.append(toxic_basin)
+
+        ruins_4 = self.world.get_screen(ScreenID.RUINS_4)
+        blessed_spring = BlessedSpring(80, 80)
+        ruins_4.entities.append(blessed_spring)
+
+        # Cliffs - Sleepless Statue
+        cliffs_4 = self.world.get_screen(ScreenID.CLIFFS_4)
+        statue = SleeplessStatue(80, 80)
+        cliffs_4.entities.append(statue)
+
+        # Hub - Silver Gate (blocks path to final chamber)
+        silver_gate = Gate(80, 20, 16, 16, InteractableType.SILVER_GATE, ItemType.SILVER_KEY, COLOR_GRAY)
+        hub.entities.append(silver_gate)
+
+        print("Interactables placed in world")
+
     def handle_events(self):
         """Handle pygame events"""
         for event in pygame.event.get():
@@ -118,22 +185,92 @@ class Game:
                     self.handle_space_interaction()
 
     def handle_space_interaction(self):
-        """Handle SPACE key interaction (pickup/drop items)"""
+        """Handle SPACE key interaction (pickup/drop items, use items on interactables)"""
         if not self.state_machine.is_state(GameState.EXPLORE):
             return
 
         current_screen = self.world.get_current_screen()
 
-        # If player is holding an item, drop it
+        # If player is holding an item
         if self.player.has_item():
-            dropped_item = self.player.drop_item()
-            if dropped_item is not None:
-                # Place item at player's current position
-                dropped_item.x = self.player.x + self.player.width // 2 - dropped_item.size // 2
-                dropped_item.y = self.player.y + self.player.height // 2 - dropped_item.size // 2
-                dropped_item.active = True
-                current_screen.entities.append(dropped_item)
-                print(f"Dropped: {dropped_item.get_name()}")
+            held_item = self.player.held_item
+            interacted = False
+
+            # First, try to use item on nearby interactables
+            for entity in current_screen.entities:
+                if hasattr(entity, 'interactable_type'):
+                    if entity.is_near_player(
+                        self.player.x, self.player.y,
+                        self.player.width, self.player.height
+                    ):
+                        result = entity.interact(held_item)
+                        if result:
+                            print(f"Used {held_item.get_name()} on {entity.get_name()}")
+                            interacted = True
+
+                            # Handle different interaction results
+                            if result == "filled":
+                                # Item was transformed (watering can/chalice filled)
+                                print(f"-> {held_item.get_name()}")
+                                break
+                            elif result == "planted":
+                                # Acorn planted in dirt
+                                self.player.drop_item()
+                                print("Acorn planted in soft dirt")
+                                break
+                            elif result == "grow_tree":
+                                # Water planted acorn to grow tree bridge
+                                if hasattr(self, 'tree_chasm'):
+                                    self.tree_chasm.grow_bridge()
+                                    print("A tree grows across the chasm!")
+                                # Empty the watering can
+                                held_item.item_type = ItemType.WATERING_CAN
+                                held_item.color = COLOR_GRAY
+                                held_item.sprite.fill(COLOR_GRAY)
+                                break
+                            elif result == "bomb_placed":
+                                # Bomb placed at wall - drop it and it will explode
+                                dropped = self.player.drop_item()
+                                dropped.x = entity.x
+                                dropped.y = entity.y
+                                dropped.active = True
+                                current_screen.entities.append(dropped)
+                                # Mark wall for destruction
+                                entity.is_activated = True
+                                entity.solid = False
+                                entity.active = False
+                                print("Bomb placed! The wall crumbles!")
+                                # Respawn bomb at original location
+                                catacombs_2 = self.world.get_screen(ScreenID.CATACOMBS_2)
+                                catacombs_2.entities.append(create_item(ItemType.BOMB, 50, 80))
+                                break
+                            elif result == "cleansed":
+                                # Toxic basin cleansed
+                                print("The toxic slime recedes!")
+                                # Empty the chalice
+                                self.player.drop_item()
+                                break
+                            elif result == "sleeping":
+                                # Statue put to sleep
+                                print("The statue's eyes close... it sleeps.")
+                                break
+                            elif result is True:
+                                # Generic success (like pedestal)
+                                # Consume the item
+                                self.player.drop_item()
+                                print(f"{entity.get_name()} activated!")
+                                break
+
+            # If didn't interact with anything, drop the item
+            if not interacted:
+                dropped_item = self.player.drop_item()
+                if dropped_item is not None:
+                    # Place item at player's current position
+                    dropped_item.x = self.player.x + self.player.width // 2 - dropped_item.size // 2
+                    dropped_item.y = self.player.y + self.player.height // 2 - dropped_item.size // 2
+                    dropped_item.active = True
+                    current_screen.entities.append(dropped_item)
+                    print(f"Dropped: {dropped_item.get_name()}")
         else:
             # Try to pick up an item
             for entity in current_screen.entities:
