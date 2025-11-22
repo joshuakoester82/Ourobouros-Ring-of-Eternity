@@ -125,6 +125,14 @@ class World:
             air_color
         )
 
+        # Final Chamber (behind Silver Gate) - Dark/mysterious
+        final_color = (10, 10, 20)  # Very dark blue
+        self.screens[ScreenID.FINAL_CHAMBER] = Screen(
+            ScreenID.FINAL_CHAMBER,
+            "The Final Chamber",
+            final_color
+        )
+
     def _connect_screens(self):
         """Set up connections between screens"""
         # Hub connections (center of the web)

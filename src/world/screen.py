@@ -13,6 +13,9 @@ class ScreenID(Enum):
     # Hub
     TOWER_HUB = "tower_hub"
 
+    # Final Chamber (behind Silver Gate)
+    FINAL_CHAMBER = "final_chamber"
+
     # North - Withered Gardens (Earth)
     GARDENS_1 = "gardens_1"
     GARDENS_2 = "gardens_2"
