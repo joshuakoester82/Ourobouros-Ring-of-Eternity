@@ -134,7 +134,7 @@ class Screen:
         if 0 <= tile_y < rows and 0 <= tile_x < cols:
             return self.tiles[tile_y][tile_x]
 
-        return True  # Out of bounds = solid
+        return False  # Out of bounds = passable (allows screen transitions)
 
     def set_tile_solid(self, tile_x: int, tile_y: int, solid: bool = True):
         """
