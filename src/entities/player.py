@@ -104,8 +104,8 @@ class Player:
 
         # Keep player within screen boundaries (allow slightly off-screen for transitions)
         # Extended bounds to allow screen transitions
-        self.x = max(-self.width, min(self.x, NATIVE_WIDTH))
-        self.y = max(-self.height, min(self.y, NATIVE_HEIGHT))
+        self.x = max(-self.width, min(self.x, NATIVE_WIDTH + self.width))
+        self.y = max(-self.height, min(self.y, NATIVE_HEIGHT + self.height))
 
     def render(self, surface: pygame.Surface):
         """
