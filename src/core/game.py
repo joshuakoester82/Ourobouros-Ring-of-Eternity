@@ -91,10 +91,10 @@ class Game:
         self.ambient_manager = AmbientManager()
         self.sound_manager.set_volume(0.6)  # Moderate volume
 
-        # Player (spawn near top of screen to avoid fountain)
+        # Player (spawn in upper-middle area, avoiding gate and fountain)
         self.player = Player(
-            x=NATIVE_WIDTH // 2 - 8,  # Centered horizontally (72)
-            y=32  # Near top, clear of fountain at (80, 96)
+            x=NATIVE_WIDTH // 2 - 4,  # Centered horizontally (76)
+            y=48  # Below silver gate (80, 20), above fountain (80, 96)
         )
 
         # Spawn test items
@@ -326,10 +326,10 @@ class Game:
         # Recreate world
         self.world = World()
 
-        # Reset player
+        # Reset player (same spawn as init)
         self.player = Player(
-            x=NATIVE_WIDTH // 2 - 8,
-            y=NATIVE_HEIGHT // 2 - 8
+            x=NATIVE_WIDTH // 2 - 4,
+            y=48
         )
 
         # Respawn items
@@ -719,8 +719,8 @@ class Game:
 
         # Respawn player at hub
         self.world.current_screen_id = ScreenID.TOWER_HUB
-        self.player.x = NATIVE_WIDTH // 2 - 8
-        self.player.y = NATIVE_HEIGHT // 2 - 8
+        self.player.x = NATIVE_WIDTH // 2 - 4
+        self.player.y = 48
 
     def _update_ambient_audio(self):
         """Update ambient audio based on current screen"""

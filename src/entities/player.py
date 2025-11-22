@@ -11,7 +11,7 @@ from src.core.constants import (
 
 class Player:
     """
-    Player entity - 16x16 white square
+    Player entity - 8x8 white square
     """
 
     def __init__(self, x: int, y: int):
