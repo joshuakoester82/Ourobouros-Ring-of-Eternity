@@ -80,9 +80,14 @@ class SoundManager:
         noise = np.random.uniform(-0.3, 0.3, samples)
 
         # Apply envelope (fade in/out quickly)
-        envelope = np.linspace(0, 1, samples // 4)
-        noise[:samples // 4] *= envelope
-        noise[-samples // 4:] *= envelope[::-1]
+        fade_length = samples // 4
+        envelope_start = np.linspace(0, 1, fade_length)
+        noise[:fade_length] *= envelope_start
+
+        # For the end fade, create an envelope matching the exact slice length
+        end_slice_length = len(noise[-fade_length:])
+        envelope_end = np.linspace(1, 0, end_slice_length)
+        noise[-fade_length:] *= envelope_end
 
         # Convert to 16-bit PCM
         audio = (noise * 32767).astype(np.int16)
